@@ -1,27 +1,35 @@
 # installations
 
-Automated installation scripts for setting up machines. These are public entry points that authenticate with GitHub and then pull private configuration repos.
+Automated NixOS installation scripts. Public entry points that authenticate with GitHub, clone private config, and handle the full install.
 
-## Asahi NixOS (Apple Silicon dual-boot)
+## Available Setups
 
-Dual-boot an Apple Silicon Mac with NixOS + Hyprland, sharing a ZFS workspace between macOS and Linux.
+### 1. Intel Mac (dedicated NixOS)
 
-### Prerequisites
+Full-disk NixOS + Hyprland install on an Intel Mac. Wipes macOS entirely. Syncs ~/workplace/ with other machines via Syncthing.
 
-1. Run the Asahi installer on macOS: `curl https://alx.sh | sh`
-2. Boot the NixOS installer from USB
-3. Connect to WiFi: `nmcli device wifi connect "SSID" password "PASS"`
+**Boot a [standard NixOS minimal ISO](https://nixos.org/download/) USB, connect to network, then:**
 
-### Install
+```bash
+curl -sL https://raw.githubusercontent.com/radical-beard/installations/main/intel-nixos/install.sh | sudo bash
+```
+
+### 2. Apple Silicon Mac (dual-boot)
+
+Dual-boot NixOS + Hyprland alongside macOS on Apple Silicon. Shares ~/workplace/ via ZFS partition.
+
+**Run the Asahi installer on macOS first (`curl https://alx.sh | sh`), then boot the [nixos-apple-silicon ISO](https://github.com/nix-community/nixos-apple-silicon/releases) from USB:**
 
 ```bash
 curl -sL https://raw.githubusercontent.com/radical-beard/installations/main/asahi-nixos/install.sh | sudo bash
 ```
 
-This will:
-- Authenticate you with GitHub (device flow — approve on your phone)
-- Clone your private NixOS config
-- Partition the disk (NixOS root + ZFS)
-- Install NixOS with your config
+## What These Scripts Do
 
-After first boot, run: `sudo bash /etc/nixos/scripts/post-install.sh`
+1. Authenticate you with GitHub (device flow — approve on your phone)
+2. Clone your private NixOS config repo
+3. Partition and format the disk
+4. Generate machine-specific hardware config
+5. Run `nixos-install`
+
+No secrets are stored in this public repo. Your NixOS configuration lives in a separate private repo.
