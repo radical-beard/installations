@@ -282,12 +282,12 @@ echo ""
 ask "Install NixOS now? [Y/n]: "
 read -r CONFIRM
 if [[ "$CONFIRM" == "n" || "$CONFIRM" == "N" ]]; then
-  info "Skipped. Run manually: nixos-install --flake /mnt/etc/nixos#macbook"
+  info "Skipped. Run manually: nixos-install --flake /mnt/etc/nixos#asahi-mac"
   exit 0
 fi
 
 info "Running nixos-install (this will take a while)..."
-nixos-install --flake /mnt/etc/nixos#macbook
+nixos-install --flake /mnt/etc/nixos#asahi-mac
 
 echo ""
 echo -e "${GREEN}${BOLD}═══════════════════════════════════════════════════${NC}"
