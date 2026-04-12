@@ -173,7 +173,7 @@ ok "Generated"
 # ─── Apply Config ────────────────────────────────────────────────────────────
 
 # Copy machine-specific and common config
-mkdir -p /mnt/etc/nixos/common /mnt/etc/nixos/machines/intel
+mkdir -p /mnt/etc/nixos/common /mnt/etc/nixos/machines/intel /mnt/etc/nixos/scripts
 
 cp /tmp/nixos-config/flake.nix /mnt/etc/nixos/
 cp /tmp/nixos-config/common/*.nix /mnt/etc/nixos/common/
@@ -183,6 +183,10 @@ cp /tmp/nixos-config/machines/intel/syncthing.nix /mnt/etc/nixos/machines/intel/
 # Copy the full machines/asahi dir too (needed by flake even if not used on this machine)
 mkdir -p /mnt/etc/nixos/machines/asahi
 cp /tmp/nixos-config/machines/asahi/*.nix /mnt/etc/nixos/machines/asahi/ 2>/dev/null || true
+
+# Copy scripts (post-install, etc.)
+cp /tmp/nixos-config/scripts/post-install-intel.sh /mnt/etc/nixos/scripts/ 2>/dev/null || true
+chmod +x /mnt/etc/nixos/scripts/*.sh 2>/dev/null || true
 
 # Move generated hardware-configuration.nix into the machine dir
 mv /mnt/etc/nixos/hardware-configuration.nix /mnt/etc/nixos/machines/intel/
@@ -234,11 +238,13 @@ echo ""
 echo "  1. Remove the USB drive and reboot"
 echo "  2. Log in as root, set your password:  passwd jaaaacob"
 echo "  3. Log in as jaaaacob — Hyprland should start"
-echo "  4. Set up Syncthing:"
-echo "     - Open http://localhost:8384 in Firefox"
-echo "     - On your M1 Pro, open Syncthing and get the device ID"
-echo "     - Add each machine as a remote device on the other"
-echo "     - Share ~/workplace/ between both devices"
-echo "  5. Create ~/workplace/ if it doesn't exist:"
-echo "     mkdir -p ~/workplace"
+echo "  4. Run the post-install script (sets up Tailscale + Syncthing):"
+echo ""
+echo "     sudo bash /etc/nixos/scripts/post-install-intel.sh"
+echo ""
+echo "  This will:"
+echo "    - Join your Tailscale network (browser auth)"
+echo "    - Create ~/workplace/"
+echo "    - Register this machine with positron for Syncthing sync"
+echo "    - Files will start syncing automatically"
 echo ""
