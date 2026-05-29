@@ -59,6 +59,19 @@ if ! command -v gh &>/dev/null; then
   export NIX_SHELL_DEPS="true"
 fi
 
+run_with_deps() {
+  if [ "${NIX_SHELL_DEPS:-}" = "true" ]; then
+    local quoted=""
+    local arg
+    for arg in "$@"; do
+      quoted+=" $(printf '%q' "$arg")"
+    done
+    nix-shell -p gh git --run "${quoted# }"
+  else
+    "$@"
+  fi
+}
+
 # ─── GitHub Auth ─────────────────────────────────────────────────────────────
 
 echo ""
@@ -68,11 +81,7 @@ info "Authenticate with GitHub to access your private config repo."
 info "Approve the device code on your phone."
 echo ""
 
-if [ "${NIX_SHELL_DEPS:-}" = "true" ]; then
-  nix-shell -p gh --run "gh auth login -p https -h github.com"
-else
-  gh auth login -p https -h github.com
-fi
+run_with_deps gh auth login -p https -h github.com
 ok "Authenticated with GitHub"
 
 # ─── Config Repo ─────────────────────────────────────────────────────────────
@@ -85,11 +94,7 @@ if [ -z "$CONFIG_REPO" ]; then
 fi
 
 info "Cloning config from $CONFIG_REPO..."
-if [ "${NIX_SHELL_DEPS:-}" = "true" ]; then
-  nix-shell -p gh git --run "gh repo clone $CONFIG_REPO /tmp/nixos-config"
-else
-  gh repo clone "$CONFIG_REPO" /tmp/nixos-config
-fi
+run_with_deps gh repo clone "$CONFIG_REPO" /tmp/nixos-config
 ok "Config cloned"
 
 # ─── Fetch device config from GitHub variables ─────────────────────────────
@@ -99,15 +104,8 @@ info "Fetching device config from GitHub repository variables..."
 # Extract owner/repo from URL (handles both https://github.com/owner/repo and owner/repo)
 REPO_SLUG=$(echo "$CONFIG_REPO" | sed 's|https://github.com/||' | sed 's|\.git$||')
 
-GH_CMD="gh"
-[ "${NIX_SHELL_DEPS:-}" = "true" ] && GH_CMD="nix-shell -p gh --run"
-
 fetch_var() {
-  if [ "${NIX_SHELL_DEPS:-}" = "true" ]; then
-    nix-shell -p gh --run "gh variable get $1 -R $REPO_SLUG 2>/dev/null" || echo ""
-  else
-    gh variable get "$1" -R "$REPO_SLUG" 2>/dev/null || echo ""
-  fi
+  run_with_deps gh variable get "$1" -R "$REPO_SLUG" 2>/dev/null || echo ""
 }
 
 POSITRON_SYNCTHING_ID=$(fetch_var POSITRON_SYNCTHING_ID)
@@ -252,6 +250,12 @@ mv /mnt/etc/nixos/hardware-configuration.nix /mnt/etc/nixos/machines/intel/
 # Remove the auto-generated configuration.nix (we use flakes)
 rm -f /mnt/etc/nixos/configuration.nix
 
+cat > /mnt/etc/nixos/.gitignore <<'GITIGNORE'
+machines/*/hardware-configuration.nix
+devices.env
+partition-info.txt
+GITIGNORE
+
 ok "Config files in place"
 
 # ─── Init git repo for config-sync ──────────────────────────────────────────
@@ -260,7 +264,7 @@ info "Setting up /etc/nixos as a git repo..."
 cd /mnt/etc/nixos
 git init
 git remote add origin "$CONFIG_REPO"
-git add -A
+git add -A -- . ':!machines/*/hardware-configuration.nix' ':!devices.env' ':!partition-info.txt'
 git commit -m "Initial install config (intel-mac)" 2>/dev/null || true
 cd /
 ok "Git repo initialized"

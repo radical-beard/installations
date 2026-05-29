@@ -62,6 +62,19 @@ if ! command -v gh &>/dev/null; then
   export NIX_SHELL_DEPS="true"
 fi
 
+run_with_deps() {
+  if [ "${NIX_SHELL_DEPS:-}" = "true" ]; then
+    local quoted=""
+    local arg
+    for arg in "$@"; do
+      quoted+=" $(printf '%q' "$arg")"
+    done
+    nix-shell -p gh git --run "${quoted# }"
+  else
+    "$@"
+  fi
+}
+
 # ─── GitHub Authentication ──────────────────────────────────────────────────
 
 echo ""
@@ -71,11 +84,7 @@ info "You need to authenticate with GitHub to access your private config repo."
 info "This uses GitHub's device flow — you'll approve it on your phone."
 echo ""
 
-if [ "${NIX_SHELL_DEPS:-}" = "true" ]; then
-  nix-shell -p gh --run "gh auth login -p https -h github.com"
-else
-  gh auth login -p https -h github.com
-fi
+run_with_deps gh auth login -p https -h github.com
 
 ok "Authenticated with GitHub"
 
@@ -96,11 +105,7 @@ fi
 # ─── Clone config ───────────────────────────────────────────────────────────
 
 info "Cloning config from $CONFIG_REPO..."
-if [ "${NIX_SHELL_DEPS:-}" = "true" ]; then
-  nix-shell -p gh git --run "gh repo clone $CONFIG_REPO /tmp/nixos-config"
-else
-  gh repo clone "$CONFIG_REPO" /tmp/nixos-config
-fi
+run_with_deps gh repo clone "$CONFIG_REPO" /tmp/nixos-config
 ok "Config cloned to /tmp/nixos-config"
 
 # ─── Discover disks ─────────────────────────────────────────────────────────
@@ -275,6 +280,12 @@ if [ -d /tmp/nixos-config/macos ]; then
   cp -r /tmp/nixos-config/macos /mnt/etc/nixos/
 fi
 
+cat > /mnt/etc/nixos/.gitignore <<'GITIGNORE'
+machines/*/hardware-configuration.nix
+devices.env
+partition-info.txt
+GITIGNORE
+
 ok "Config files in place"
 
 # ─── Set ZFS hostId ──────────────────────────────────────────────────────────
@@ -289,7 +300,7 @@ info "Setting up /etc/nixos as a git repo..."
 cd /mnt/etc/nixos
 git init
 git remote add origin "$CONFIG_REPO"
-git add -A
+git add -A -- . ':!machines/*/hardware-configuration.nix' ':!devices.env' ':!partition-info.txt'
 git commit -m "Initial install config (asahi-mac, external SSD)" 2>/dev/null || true
 cd /
 ok "Git repo initialized in /etc/nixos"
